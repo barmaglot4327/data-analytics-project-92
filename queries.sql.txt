@@ -1,0 +1,74 @@
+Продажи 5.1
+
+  CONCAT(e.first_name, ' ', e.last_name) AS seller, -- для склейки строк --
+  COUNT(s.sales_id)                  AS operations, -- считает и называет --
+  SUM(p.price * s.quantity)          AS income -- суммирует прибыль --
+FROM sales AS s
+JOIN employees AS e -- для соединения таблиц --
+  ON s.sales_person_id = e.employee_id
+JOIN products AS p
+  ON s.product_id = p.product_id
+GROUP BY 
+  e.first_name,
+  e.last_name
+ORDER BY
+  income DESC
+LIMIT 10;
+
+
+Продажи 5.2
+
+
+WITH seller_stats AS ( --Создаем временную таблицу - -
+  SELECT
+    CONCAT(e.first_name, ' ', e.last_name) AS seller,
+    AVG(p.price * s.quantity)                AS average_income -- считаем среднее значение каждого продавйа -- 
+  FROM sales AS s
+  JOIN employees AS e -- соединяем таблицы для поиска данных --
+    ON s.sales_person_id = e.employee_id
+  JOIN products AS p
+    ON s.product_id = p.product_id
+  GROUP BY
+    e.first_name,
+    e.last_name
+),
+overall_avg AS (  -- считаем среднюю выручку за сделку по всем продажам -- 
+  SELECT
+    AVG(p.price * s.quantity) AS avg_income_all
+  FROM sales AS s
+  JOIN products AS p
+    ON s.product_id = p.product_id
+)
+SELECT
+  seller,
+  ROUND(average_income) AS average_income -- Выбираем тех продавцов, у кого average_income меньше общего среднего --
+FROM seller_stats, overall_avg
+WHERE seller_stats.average_income < overall_avg.avg_income_all
+ORDER BY
+  average_income ASC;
+
+
+
+Продажи 5.3
+
+
+SELECT
+  CONCAT(e.first_name, ' ', e.last_name)        AS seller,
+  LOWER(TO_CHAR(s.sale_date, 'FMDay'))          AS day_of_week, -- извлекает из дат дни недели -- 
+  ROUND(SUM(p.price * s.quantity))              AS income
+FROM sales AS s
+JOIN employees AS e -- соединяем таблички --
+  ON s.sales_person_id = e.employee_id
+JOIN products AS p
+  ON s.product_id = p.product_id
+GROUP BY
+  -- группируем по продавцу -- 
+  e.first_name,
+  e.last_name,
+  -- порядковый номер дня недели для сортировки от 0 до 6 --
+  EXTRACT(DOW FROM s.sale_date),
+  -- группировка по назвнаию дня --
+  LOWER(TO_CHAR(s.sale_date, 'FMDay'))
+ORDER BY
+  EXTRACT(DOW FROM s.sale_date),
+  seller;
